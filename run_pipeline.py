@@ -3,6 +3,7 @@ import logging
 import pandas as pd
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
+from validate_data import validate_sensor_data
 
 # Load environment variables
 load_dotenv()
@@ -113,18 +114,29 @@ if __name__ == "__main__":
     logging.info("========== Pipeline Started ==========")
 
     try:
+
         raw_data = extract_data()
 
         clean_data = transform_data(raw_data)
 
-        load_data(clean_data)
+        # Great Expectations Quality Gate
+        if validate_sensor_data(clean_data):
 
-        print("\nCleaned Data:\n")
-        print(clean_data)
+            load_data(clean_data)
 
-        logging.info("========== Pipeline Completed Successfully ==========")
+            print("\nCleaned Data:\n")
+            print(clean_data)
+
+            logging.info(
+                "========== Pipeline Completed Successfully =========="
+            )
+
+        else:
+
+            logging.error(
+                "Pipeline stopped because data quality validation failed."
+            )
 
     except Exception as e:
-        logging.critical(
-            f"Pipeline failed: {e}"
-        )
+
+        logging.critical(f"Pipeline failed: {e}")
