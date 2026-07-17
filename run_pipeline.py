@@ -75,16 +75,56 @@ def transform_data(df):
         logging.error(f"Transformation failed: {e}")
         raise
 
+
+# Load Phase
+
+def load_data(df):
+    """
+    Load cleaned data into SQLite database.
+    Implements idempotency by replacing the target table.
+    """
+
+    logging.info("Starting Load Phase...")
+
+    try:
+        # Create database connection
+        engine = create_engine(f"sqlite:///{DB_PATH}")
+
+        # Load data into SQLite
+        # replace ensures idempotency
+        df.to_sql(
+            "daily_ops_snapshot",
+            engine,
+            if_exists="replace",
+            index=False
+        )
+
+        logging.info(
+            f"Load successful. {len(df)} rows written to database."
+        )
+
+    except Exception as e:
+        logging.error(f"Load failed: {e}")
+        raise
+
 # Pipeline Execution
 if __name__ == "__main__":
 
     logging.info("========== Pipeline Started ==========")
 
-    raw_data = extract_data()
+    try:
+        raw_data = extract_data()
 
-    clean_data = transform_data(raw_data)
+        clean_data = transform_data(raw_data)
 
-    print("\nCleaned Data:\n")
-    print(clean_data)
+        load_data(clean_data)
 
-    logging.info("========== Extract & Transform Completed ==========")
+        print("\nCleaned Data:\n")
+        print(clean_data)
+
+        logging.info("========== Pipeline Completed Successfully ==========")
+
+    except Exception as e:
+        logging.critical(
+            f"Pipeline failed: {e}"
+        )
